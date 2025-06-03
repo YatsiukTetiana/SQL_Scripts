@@ -16,4 +16,9 @@ Analysis based on data from the database of an e-commerce furniture store
 **Result:** 
 ![Query Result](Prediction_Fulfillment_CTE.png)
 
+## 3. SQL_Revenue_by_Device_Continent_Sessions
+**Objective:** 
+- Calculate revenue by device and continent with sessions
+**Result:**
+![Query Result](Revenue_by_Device_Continent_Sessions.png)
 
