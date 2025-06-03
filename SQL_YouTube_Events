@@ -1,0 +1,16 @@
+WITH title_count AS (
+SELECT
+  ep.ga_session_id,
+  COUNT(CASE WHEN params.value.string_value LIKE '%YouTube%' THEN params.value.string_value END) AS you_tube_cnt,
+  COUNT(CASE WHEN params.value.string_value IS NOT NULL THEN params.value.string_value END) AS title_cnt,
+FROM `data-analytics-mate.DA.event_params` ep, UNNEST(ep.event_params) AS params
+WHERE params.key = 'page_title'
+GROUP BY ep.ga_session_id)
+
+SELECT
+  sp.continent AS continent,
+  SUM(title_count.you_tube_cnt)/SUM(title_count.title_cnt)*100 AS you_tube_percentage
+FROM `data-analytics-mate.DA.session_params` sp
+JOIN title_count
+ON sp.ga_session_id = title_count.ga_session_id
+GROUP BY sp.continent
