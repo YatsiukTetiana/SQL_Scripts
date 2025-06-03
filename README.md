@@ -14,5 +14,6 @@ Analysis based on data from the database of an e-commerce furniture store
 - Calculate the percentage of fulfillment of the accumulative income from the accumulative goals (predict) in the context of the day.
 
 **Result:** 
+![Query Result](Prediction_Fulfillment_CTE.png)
 
 
