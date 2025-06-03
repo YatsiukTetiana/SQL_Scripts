@@ -1,0 +1,52 @@
+WITH
+  actual_revenue AS (
+  SELECT
+    ses.date AS date_day,
+    SUM(p.price) AS revenue
+  FROM  `data-analytics-mate.DA.order` ord
+  JOIN  `data-analytics-mate.DA.product` p
+  ON  ord.item_id = p.item_id
+  JOIN  `data-analytics-mate.DA.session` ses
+  ON  ord.ga_session_id = ses.ga_session_id
+  GROUP BY  date_day),
+
+  predict_revenue AS (
+  SELECT
+    rp.date AS date_day,
+    rp.predict AS predict,
+  FROM  `data-analytics-mate.DA.revenue_predict` rp),
+
+  union_revenue_and_predict AS (
+  SELECT
+    date_day,
+    predict,
+    0 AS revenue
+  FROM  predict_revenue
+  UNION ALL
+  SELECT
+    date_day,
+    0 AS predict,
+    revenue
+  FROM  actual_revenue),
+
+  revenue_and_predict_joined AS (
+  SELECT
+    date_day,
+    SUM(predict) AS predict_revenue,
+    SUM(revenue) AS actual_revenue
+  FROM  union_revenue_and_predict
+  GROUP BY  date_day),
+
+  accumulated_revenue_and_predict_revenue AS (
+  SELECT
+    date_day,
+    SUM(actual_revenue) OVER (ORDER BY date_day) AS accum_revenue,
+    SUM(predict_revenue) OVER (ORDER BY date_day) AS accum_predict
+  FROM  revenue_and_predict_joined)
+
+SELECT
+  date_day,
+  accum_revenue,
+  accum_predict,
+  accum_revenue/accum_predict*100 AS diff_percentage
+FROM  accumulated_revenue_and_predict_revenue
