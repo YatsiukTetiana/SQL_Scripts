@@ -1,0 +1,88 @@
+-- revenue
+WITH revenue_data AS (
+SELECT
+  sp.continent AS continent,
+  SUM(pr.price) AS revenue_total_continent,
+  SUM(CASE WHEN device = 'mobile'THEN pr.price END) AS revenue_mobile,
+  SUM(CASE WHEN device = 'desktop'THEN pr.price END) AS revenue_desktop,
+FROM `data-analytics-mate.DA.order` o
+JOIN `data-analytics-mate.DA.product` pr
+ON o.item_id = pr.item_id
+JOIN `data-analytics-mate.DA.session_params` sp
+ON o.ga_session_id = sp.ga_session_id
+GROUP BY sp.continent),
+
+
+-- all revenue data
+continents_revenue AS (
+SELECT
+  continent,
+  revenue_total_continent,
+  revenue_mobile,
+  revenue_desktop,
+  SUM(revenue_total_continent) OVER() AS all_continents_revenue
+FROM revenue_data),
+
+
+-- percent from total revenue
+percent_from_total_revenue AS (
+SELECT
+  continent,
+  revenue_total_continent,
+  revenue_mobile,
+  revenue_desktop,
+  revenue_total_continent/all_continents_revenue*100 AS percent_from_total
+FROM continents_revenue),
+
+
+-- account-session data by continent
+account_data AS (
+SELECT
+  sp.continent AS continent,
+  COUNT(acc.id) AS account_cnt,
+  SUM(acc.is_verified) AS verified_account_cnt,
+  COUNT(sp.ga_session_id) AS session_cnt
+FROM `data-analytics-mate.DA.account` AS acc
+JOIN `data-analytics-mate.DA.account_session` acs
+ON acc.id = acs.account_id
+RIGHT JOIN `data-analytics-mate.DA.session_params` sp
+ON acs.ga_session_id = sp.ga_session_id
+GROUP BY sp.continent),
+
+
+union_data AS (
+SELECT
+  continent,
+  revenue_total_continent,
+  revenue_mobile,
+  revenue_desktop,
+  percent_from_total,
+  0 AS account_cnt,
+  0 AS verified_account_cnt,
+  0 AS session_cnt
+FROM percent_from_total_revenue
+UNION ALL
+SELECT
+  continent,
+  0 AS revenue_total_continent,
+  0 AS revenue_mobile,
+  0 AS revenue_desktop,
+  0 AS percent_from_total,
+  account_cnt,
+  verified_account_cnt,
+  session_cnt
+FROM account_data)
+
+
+SELECT
+  continent AS Continent,
+  SUM(revenue_total_continent) AS Revenue,
+  SUM(revenue_mobile) AS Revenue_from_Mobile,
+  SUM(revenue_desktop) AS Revenue_from_Desktop,
+  SUM(percent_from_total) AS percent_Revenue_from_Total,
+  SUM(account_cnt) AS Account_Count,
+  SUM(verified_account_cnt) AS Verified_Account,
+  SUM(session_cnt) AS Session_Count
+FROM union_data
+GROUP BY continent
+ORDER BY Revenue DESC
